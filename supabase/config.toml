@@ -1,0 +1,7 @@
+# Supabase CLI configuration (used only to deploy the Edge Function).
+project_id = "ddam-exam-booking"
+
+[functions.api]
+# Public endpoints must work without a Supabase key; admin endpoints check their own token.
+verify_jwt = false
+entrypoint = "./functions/api/index.js"
