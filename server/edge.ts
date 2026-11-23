@@ -52,4 +52,19 @@ export async function handle(req: Request, raw: Record<string, string>): Promise
   }
 }
 
-if (typeof Deno !== 'undefined') Deno.serve((req) => handle(req, Deno.env.toObject()));
+if (typeof Deno !== 'undefined') {
+  Deno.serve(async (req) => {
+    try {
+      return await handle(req, Deno.env.toObject());
+    } catch (err) {
+      // Errors outside Hono's handler would otherwise surface only as a bare "Internal Server Error".
+      console.error('edge handler crashed', err);
+      const isHealth = new URL(req.url).pathname.endsWith('/health');
+      const detail = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
+      return Response.json(
+        { error: { code: 'CRASH', message: 'Server error.', ...(isHealth ? { detail } : {}) } },
+        { status: 500 },
+      );
+    }
+  });
+}
