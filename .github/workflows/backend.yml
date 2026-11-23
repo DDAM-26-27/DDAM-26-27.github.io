@@ -55,7 +55,7 @@ jobs:
         run: npm run build:edge
       - uses: supabase/setup-cli@v1
         if: steps.cfg.outputs.ready == 'true'
-        with: { version: latest }
+        with: { version: 3.2.0 }
       - name: Configure and deploy Edge Function
         if: steps.cfg.outputs.ready == 'true'
         env:
