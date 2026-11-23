@@ -4,19 +4,24 @@ import { useCourse } from '../lib/course';
 import { useLoad, useTitle } from '../lib/hooks';
 import type { PublicSession } from '../../shared/types';
 import { formatDateLong, formatDuration, formatTime } from '../../shared/time';
-import { examDuration } from '../../shared/rules';
-import { Alert, Badge, Card, Loading, PageTitle, RegistrationBadge, ScheduleStatusBadge } from '../components/ui';
+import { CANCEL_CUTOFF_HOURS, examDuration } from '../../shared/rules';
+import { Alert, Card, Loading, PageTitle, RegistrationBadge, ScheduleStatusBadge } from '../components/ui';
 
 export function SessionCard({ s }: { s: PublicSession }) {
   const a = s.availability;
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col" title={`📅 ${s.title || 'Examination day'}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">{formatDateLong(s.date)}</h2>
-          <p className="text-sm text-slate-600">
-            {s.startTime}–{s.endTime}
-            {s.location ? ` · ${s.location}` : ''}
+          <p className="text-xl font-bold text-blue-700">{formatDateLong(s.date)}</p>
+          <p className="text-sm">
+            🕘 {s.startTime}–{s.endTime}
+            {s.location ? (
+              <>
+                {' '}
+                · 📍 <strong>{s.location}</strong>
+              </>
+            ) : null}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -24,7 +29,7 @@ export function SessionCard({ s }: { s: PublicSession }) {
           <ScheduleStatusBadge status={s.scheduleStatus} />
         </div>
       </div>
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+      <dl className="win-sunken mt-4 grid grid-cols-2 gap-x-4 gap-y-2 bg-slate-50 p-3 text-sm sm:grid-cols-4">
         <div>
           <dt className="text-slate-500">Groups registered</dt>
           <dd className="font-semibold">{a.groupCount}</dd>
@@ -44,14 +49,14 @@ export function SessionCard({ s }: { s: PublicSession }) {
       </dl>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         {a.canBook ? (
-          <Link to={`/booking/${s.id}`} className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
-            Register a group
+          <Link to={`/booking/${s.id}`} className="btn98 btn98-primary px-5 py-2 text-base font-bold">
+            ➜ Register my group for this date
           </Link>
         ) : (
-          <span className="text-sm text-slate-600">{a.reason}</span>
+          <span className="win-sunken bg-tooltip px-2 py-1 text-sm font-bold">⛔ {a.reason}</span>
         )}
-        <Link to={`/schedule/${s.id}`} className="text-sm font-medium text-blue-700 hover:underline">
-          View schedule →
+        <Link to={`/schedule/${s.id}`} className="btn98 px-4 py-2 text-sm">
+          See the timetable of this day
         </Link>
       </div>
     </Card>
@@ -66,25 +71,41 @@ export function BookingHomePage() {
     <>
       <PageTitle sub={course?.description}>{course ? `${course.name} — oral examination` : 'Oral examination'}</PageTitle>
       {course && (
-        <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
-            <p className="font-semibold">1. Choose a date</p>
-            <p className="text-slate-600">Pick one of the examination days below.</p>
+        <Card className="mb-5" title="How it works — read this first">
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {[
+              ['Choose a date', 'Pick one of the examination days below and click the blue button.'],
+              [
+                'Register the group',
+                `ONE student registers the whole group (${course.rules.minGroupSize}–${course.rules.maxGroupSize} students), with everybody's names.`,
+              ],
+              [
+                'Get your time',
+                `The time is assigned automatically: ${course.rules.presentationMinutes} min + ${course.rules.questionsPerStudentMinutes} min per student (e.g. ${examDuration(course.rules, 4)} min for 4 students). You cannot choose it.`,
+              ],
+            ].map(([title, text], i) => (
+              <li key={title} className="flex gap-3">
+                <span className="win-raised flex h-12 w-12 shrink-0 items-center justify-center text-2xl font-bold text-blue-700">
+                  {i + 1}
+                </span>
+                <span className="text-sm">
+                  <strong className="block text-base">{title}</strong>
+                  {text}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-4 space-y-2">
+            <Alert tone="amber" title="Only ONE booking per group">
+              Do not let every member of the group register: one person books for everyone. If your group is already registered, do not
+              register it again.
+            </Alert>
+            <Alert tone="blue" title="Keep your private link">
+              After booking you get a private link (on screen and by email). You need it to check, change or cancel your booking. You can
+              cancel online until {CANCEL_CUTOFF_HOURS} hours before your exam; after that, email the lecturer.
+            </Alert>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
-            <p className="font-semibold">2. Register your group</p>
-            <p className="text-slate-600">
-              One student registers the whole group ({course.rules.minGroupSize}–{course.rules.maxGroupSize} students).
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
-            <p className="font-semibold">3. Get your time</p>
-            <p className="text-slate-600">
-              The time is assigned automatically ({course.rules.presentationMinutes} min + {course.rules.questionsPerStudentMinutes} min per
-              student, e.g. {examDuration(course.rules, 4)} min for 4).
-            </p>
-          </div>
-        </div>
+        </Card>
       )}
       {(courseError || error) && <Alert tone="red">{courseError ?? error?.message}</Alert>}
       {loading && <Loading />}
@@ -94,13 +115,15 @@ export function BookingHomePage() {
           <SessionCard key={s.id} s={s} />
         ))}
       </div>
-      <p className="mt-6 text-sm text-slate-600">
-        Already registered? Use the private link from your confirmation, or go to{' '}
-        <Link className="text-blue-700 underline" to="/manage">
-          My booking
-        </Link>
-        . <Badge>Times are estimates until the schedule is finalized</Badge>
-      </p>
+      <div className="mt-5">
+        <Alert tone="neutral" title="Already registered?">
+          Open the private link from your confirmation email, or go to{' '}
+          <Link className="font-bold text-[#0000ee] underline" to="/manage">
+            🔑 My booking
+          </Link>
+          . Times are <strong>provisional</strong> until the lecturer finalizes the schedule.
+        </Alert>
+      </div>
     </>
   );
 }

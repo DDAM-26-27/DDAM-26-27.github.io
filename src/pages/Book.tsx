@@ -131,7 +131,7 @@ export function BookPage() {
           <li
             key={key}
             aria-current={step === key ? 'step' : undefined}
-            className={`flex-1 rounded-md border px-3 py-2 ${step === key ? 'border-blue-600 bg-blue-50 font-medium text-blue-900' : 'border-slate-200 bg-white text-slate-500'}`}
+            className={`flex-1 border-2 px-3 py-2 ${step === key ? 'win-titlebar border-black font-bold' : 'border-slate-400 bg-win text-slate-600'}`}
           >
             {i + 1}. {label}
           </li>
@@ -165,7 +165,7 @@ export function BookPage() {
               <Button type="submit" loading={busy}>
                 Continue to review
               </Button>
-              <Link to="/booking" className="self-center text-sm text-slate-600 hover:underline">
+              <Link to="/booking" className="btn98 px-4 py-1.5 text-sm">
                 Cancel
               </Link>
             </div>
@@ -238,7 +238,7 @@ export function BookPage() {
                 readOnly
                 value={result.managementUrl}
                 aria-label="Booking management link"
-                className="flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs"
+                className="win-sunken flex-1 bg-tooltip px-3 py-2 font-mono text-xs"
                 onFocus={(e) => e.target.select()}
               />
               <Button
@@ -261,10 +261,10 @@ export function BookPage() {
             <Button variant="secondary" onClick={() => downloadBookingIcs(result.booking, course.name, session.location)}>
               Add to calendar (.ics)
             </Button>
-            <a className="rounded-md px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50" href={result.managementUrl}>
+            <a className="btn98 px-4 py-2 text-sm font-bold" href={result.managementUrl}>
               Open my booking
             </a>
-            <Link className="rounded-md px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50" to={`/schedule/${session.id}`}>
+            <Link className="btn98 px-4 py-2 text-sm" to={`/schedule/${session.id}`}>
               View the day&apos;s schedule
             </Link>
           </div>

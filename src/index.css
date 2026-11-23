@@ -1,7 +1,215 @@
 @import 'tailwindcss';
 
+/*
+ * Look: University of Pisa colours (UniPi blue #003c71) on a Windows 98 / Y2K skeleton:
+ * square corners, bevelled grey buttons, sunken inputs, windows with blue title bars.
+ * Tailwind's blue and slate palettes are remapped, so existing classes follow the theme.
+ */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: Tahoma, Verdana, 'MS Sans Serif', Geneva, 'DejaVu Sans', sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+
+  --color-unipi: #003c71;
+  --color-unipi-dark: #002038;
+  --color-win: #d4d0c8; /* Windows "button face" grey */
+  --color-tooltip: #ffffe1; /* Windows tooltip yellow */
+
+  --color-blue-50: #e8eef5;
+  --color-blue-100: #d2deeb;
+  --color-blue-200: #a9bfd6;
+  --color-blue-300: #7d9dbf;
+  --color-blue-400: #4f78a3;
+  --color-blue-500: #255a8f;
+  --color-blue-600: #0a4a85;
+  --color-blue-700: #003c71;
+  --color-blue-800: #002f59;
+  --color-blue-900: #002038;
+
+  --color-slate-50: #f4f4f4;
+  --color-slate-100: #ebebeb;
+  --color-slate-200: #bdbdbd;
+  --color-slate-300: #9a9a9a;
+  --color-slate-400: #808080;
+  --color-slate-500: #555555;
+  --color-slate-600: #404040;
+  --color-slate-700: #2b2b2b;
+  --color-slate-800: #161616;
+  --color-slate-900: #000000;
+
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: 3px 3px 0 rgb(0 0 0 / 0.35);
+  --shadow-xl: 5px 5px 0 rgb(0 0 0 / 0.45);
+}
+
+html {
+  font-size: 15px;
+}
+
+body {
+  /* Checkered "desktop" background. */
+  background-color: #c9c9c9;
+  background-image: repeating-conic-gradient(#c4c4c4 0 25%, #cecece 0 50%);
+  background-size: 4px 4px;
+  color: #000;
+}
+
+::selection {
+  background: #003c71;
+  color: #fff;
+}
+
+/* Windows 98 bevels ------------------------------------------------------- */
+@layer components {
+  .win-raised {
+    background: var(--color-win);
+    border: 1px solid;
+    border-color: #fff #404040 #404040 #fff;
+    box-shadow:
+      inset -1px -1px #808080,
+      inset 1px 1px #dfdfdf;
+  }
+  .win-sunken {
+    border: 1px solid;
+    border-color: #808080 #fff #fff #808080;
+    box-shadow:
+      inset 1px 1px #404040,
+      inset -1px -1px #dfdfdf;
+  }
+  .win-titlebar {
+    background: linear-gradient(90deg, #002038, #003c71 45%, #3f79b5);
+    color: #fff;
+  }
+
+  .btn98 {
+    background: var(--color-win);
+    color: #000;
+    border: 1px solid;
+    border-color: #fff #404040 #404040 #fff;
+    box-shadow:
+      inset -1px -1px #808080,
+      inset 1px 1px #dfdfdf;
+  }
+  .btn98:hover:not(:disabled) {
+    background: #e2dfd8;
+  }
+  .btn98:active:not(:disabled),
+  .btn98[aria-pressed='true'],
+  .btn98[aria-current='page'] {
+    border-color: #404040 #fff #fff #404040;
+    box-shadow:
+      inset 1px 1px #808080,
+      inset -1px -1px #dfdfdf;
+  }
+  .btn98:focus-visible {
+    outline: 1px dotted #000;
+    outline-offset: -5px;
+  }
+  .btn98:disabled {
+    color: #808080;
+    text-shadow: 1px 1px #fff;
+    cursor: not-allowed;
+  }
+  /* The "default" button: a black frame around the bevel, like Windows dialogs. */
+  .btn98-primary {
+    background: #003c71;
+    color: #fff;
+    outline: 1px solid #000;
+    border-color: #6f9cc9 #001428 #001428 #6f9cc9;
+    box-shadow:
+      inset -1px -1px #002038,
+      inset 1px 1px #3f79b5;
+  }
+  .btn98-primary:hover:not(:disabled) {
+    background: #0a4a85;
+  }
+  .btn98-primary:focus-visible {
+    outline: 2px solid #000;
+    outline-offset: 0;
+  }
+  .btn98-primary:disabled {
+    background: #8aa3bd;
+    color: #e8eef5;
+    text-shadow: none;
+    outline-color: #808080;
+  }
+  .btn98-danger {
+    background: #a00000;
+    color: #fff;
+    border-color: #ff8a8a #3a0000 #3a0000 #ff8a8a;
+    box-shadow:
+      inset -1px -1px #600000,
+      inset 1px 1px #d04040;
+  }
+  .btn98-danger:hover:not(:disabled) {
+    background: #b81010;
+  }
+  .btn98-danger:disabled {
+    background: #c99;
+    color: #fee;
+    text-shadow: none;
+  }
+
+  /* Windows 98 progress bar (blocks). */
+  .progress98 {
+    height: 18px;
+    width: 220px;
+    background-color: #fff;
+    background-image: repeating-linear-gradient(90deg, #003c71 0 10px, transparent 10px 12px);
+    background-size: 220px 100%;
+    background-repeat: no-repeat;
+    animation: progress98 1.6s steps(18) infinite;
+  }
+  @keyframes progress98 {
+    from {
+      background-size: 0 100%;
+    }
+    to {
+      background-size: 220px 100%;
+    }
+  }
+
+  .blink {
+    animation: blink 1.2s steps(2, start) infinite;
+  }
+  @keyframes blink {
+    to {
+      visibility: hidden;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink,
+    .progress98 {
+      animation: none;
+    }
+    .progress98 {
+      background-size: 60% 100%;
+    }
+  }
+}
+
+/* Old-school scrollbars (Chrome, Edge, Safari). */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+::-webkit-scrollbar-track {
+  background-color: #dfdfdf;
+  background-image: repeating-conic-gradient(#d4d0c8 0 25%, #fff 0 50%);
+  background-size: 2px 2px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-win);
+  border: 1px solid;
+  border-color: #fff #404040 #404040 #fff;
+  box-shadow: inset -1px -1px #808080;
 }
 
 @media print {
@@ -15,47 +223,53 @@
 
 /* Markdown content */
 .prose {
-  @apply max-w-none text-sm leading-relaxed text-slate-700;
+  @apply max-w-none text-sm leading-relaxed text-slate-800;
 }
 .prose h1 {
-  @apply mt-6 mb-2 text-xl font-semibold text-slate-900 first:mt-0;
+  @apply mt-6 mb-2 text-xl font-bold text-blue-700 first:mt-0;
 }
 .prose h2 {
-  @apply mt-6 mb-2 text-lg font-semibold text-slate-900 first:mt-0;
+  @apply mt-6 mb-2 border-b-2 border-blue-700 pb-1 text-lg font-bold text-blue-700 first:mt-0;
 }
 .prose h3 {
-  @apply mt-4 mb-1 font-semibold text-slate-900;
+  @apply mt-4 mb-1 font-bold text-slate-900;
 }
 .prose p {
   @apply my-3 first:mt-0;
 }
 .prose ul {
-  @apply my-3 list-disc pl-5;
+  @apply my-3 list-[square] pl-6;
 }
 .prose ol {
-  @apply my-3 list-decimal pl-5;
+  @apply my-3 list-decimal pl-6;
 }
 .prose li {
   @apply my-1;
 }
 .prose a {
-  @apply text-blue-700 underline;
+  @apply text-[#0000ee] underline;
+}
+.prose a:visited {
+  @apply text-[#551a8b];
+}
+.prose strong {
+  @apply font-bold;
 }
 .prose code {
-  @apply rounded bg-slate-100 px-1 py-0.5 text-[0.85em];
+  @apply bg-slate-100 px-1 py-0.5 font-mono text-[0.9em];
 }
 .prose pre {
-  @apply my-3 overflow-x-auto rounded bg-slate-900 p-3 text-slate-100;
+  @apply my-3 overflow-x-auto bg-black p-3 font-mono text-[#c0c0c0];
 }
 .prose table {
-  @apply my-3 w-full border-collapse text-left;
+  @apply my-3 w-full border-collapse border border-slate-400 text-left;
 }
 .prose th {
-  @apply border-b border-slate-300 py-1.5 pr-3 font-semibold text-slate-900;
+  @apply border border-slate-400 bg-win px-2 py-1 font-bold text-slate-900;
 }
 .prose td {
-  @apply border-b border-slate-100 py-1.5 pr-3;
+  @apply border border-slate-300 px-2 py-1;
 }
 .prose blockquote {
-  @apply my-3 border-l-4 border-slate-200 pl-3 text-slate-600;
+  @apply my-3 border-l-4 border-blue-700 bg-tooltip px-3 py-2 text-slate-800;
 }

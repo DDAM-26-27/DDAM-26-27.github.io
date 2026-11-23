@@ -39,24 +39,25 @@ function ContentPage({ name, fallbackTitle }: { name: string; fallbackTitle: str
 export function SiteHomePage() {
   const doc = page('home');
   useTitle('');
-  const cards: [string, string, string][] = [
-    ['/booking', 'Exam booking', 'Register your group for an oral examination day.'],
-    ['/materials', 'Materials', 'Slides, notebooks and readings.'],
-    ['/news', 'News', 'Announcements and updates.'],
-    ['/projects', 'Past projects', 'Projects published by previous students.'],
+  const cards: [string, string, string, string][] = [
+    ['/booking', '📅', 'Exam booking', 'Register your group for the oral exam.'],
+    ['/manage', '🔑', 'My booking', 'Check, change or cancel your booking.'],
+    ['/materials', '📚', 'Materials', 'Slides, notebooks and readings.'],
+    ['/news', '📰', 'News', 'Announcements and updates.'],
   ];
   return (
     <>
       <PageTitle sub={doc?.meta.subtitle}>{doc?.meta.title ?? 'Course website'}</PageTitle>
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(([to, title, text]) => (
-          <Link
-            key={to}
-            to={to}
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 hover:bg-blue-50/40"
-          >
-            <p className="font-semibold text-blue-800">{title} →</p>
-            <p className="mt-1 text-sm text-slate-600">{text}</p>
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map(([to, icon, title, text], i) => (
+          <Link key={to} to={to} className={`btn98 flex items-start gap-3 p-3 text-left ${i === 0 ? 'btn98-primary' : ''}`}>
+            <span aria-hidden className="text-3xl leading-none">
+              {icon}
+            </span>
+            <span>
+              <span className="block font-bold underline">{title}</span>
+              <span className="mt-0.5 block text-sm">{text}</span>
+            </span>
           </Link>
         ))}
       </div>
@@ -65,7 +66,7 @@ export function SiteHomePage() {
         <Card
           title="Latest news"
           actions={
-            <Link to="/news" className="text-sm text-blue-700 hover:underline">
+            <Link to="/news" className="btn98 px-3 py-0.5 text-sm">
               All news
             </Link>
           }
@@ -74,8 +75,8 @@ export function SiteHomePage() {
           <ul className="space-y-3">
             {news.slice(0, 3).map((n) => (
               <li key={n.slug}>
-                <p className="text-xs text-slate-500">{formatDate(n.meta.date)}</p>
-                <Link to={`/news#${n.slug}`} className="text-sm font-medium text-slate-900 hover:underline">
+                <p className="text-xs font-bold text-slate-600">{formatDate(n.meta.date)}</p>
+                <Link to={`/news#${n.slug}`} className="text-sm text-[#0000ee] underline">
                   {n.meta.title ?? n.slug}
                 </Link>
               </li>
@@ -97,10 +98,9 @@ export function NewsPage() {
       {news.length === 0 && <Alert tone="neutral">No news yet.</Alert>}
       <div className="space-y-4">
         {news.map((n) => (
-          <Card key={n.slug}>
+          <Card key={n.slug} title={`📰 ${formatDate(n.meta.date)}`}>
             <article id={n.slug} className="scroll-mt-20">
-              <p className="text-xs text-slate-500">{formatDate(n.meta.date)}</p>
-              <h2 className="mb-2 text-lg font-semibold">{n.meta.title ?? n.slug}</h2>
+              <h2 className="mb-2 text-lg font-bold text-blue-700">{n.meta.title ?? n.slug}</h2>
               <Prose html={n.html} />
             </article>
           </Card>
@@ -112,9 +112,9 @@ export function NewsPage() {
 
 function ProjectCard({ p }: { p: Doc }) {
   return (
-    <Link to={`/projects/${p.slug}`} className="block rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300">
-      <p className="text-xs text-slate-500">{p.meta.year}</p>
-      <p className="font-semibold text-slate-900">{p.meta.title ?? p.slug}</p>
+    <Link to={`/projects/${p.slug}`} className="btn98 block p-4 text-left">
+      <p className="text-xs font-bold">💾 {p.meta.year}</p>
+      <p className="font-bold text-blue-700 underline">{p.meta.title ?? p.slug}</p>
       {p.meta.team && <p className="text-sm text-slate-600">{p.meta.team}</p>}
       {p.meta.summary && <p className="mt-2 text-sm text-slate-700">{p.meta.summary}</p>}
     </Link>
@@ -198,12 +198,7 @@ export function ProjectPage() {
       <PageTitle sub={[p.meta.year, p.meta.team].filter(Boolean).join(' · ')}>{p.meta.title ?? p.slug}</PageTitle>
       {gh && (
         <p className="mb-4">
-          <a
-            href={gh}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
-          >
+          <a href={gh} target="_blank" rel="noopener noreferrer" className="btn98 inline-flex px-3 py-1.5 text-sm font-bold">
             View the repository on GitHub ↗
           </a>
         </p>

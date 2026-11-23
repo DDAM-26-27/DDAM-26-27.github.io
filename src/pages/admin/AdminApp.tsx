@@ -30,7 +30,7 @@ function Login({ onSignedIn }: { onSignedIn: () => void }) {
     }
   };
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-4 flex items-center gap-2">
           <img src="/favicon.svg" alt="" className="h-8 w-8" />
@@ -104,10 +104,11 @@ export function AdminApp() {
 
   return (
     <div className="min-h-screen">
-      <header className="no-print border-b border-slate-200 bg-white">
+      <header className="no-print win-raised">
+        <div className="win-titlebar px-3 py-1 text-sm font-bold">▣ Lecturer dashboard — {email}</div>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex items-center gap-4">
-            <Link to="/admin" className="flex items-center gap-2 font-semibold">
+            <Link to="/admin" className="flex items-center gap-2 font-bold text-unipi">
               <img src="/favicon.svg" alt="" className="h-7 w-7" /> Lecturer dashboard
             </Link>
             <nav className="flex gap-1 text-sm">
@@ -116,21 +117,14 @@ export function AdminApp() {
                 ['/admin/settings', 'Course & rules'],
                 ['/admin/notifications', 'Notifications'],
               ].map(([to, label]) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end
-                  className={({ isActive }) =>
-                    cx('rounded-md px-3 py-1.5', isActive ? 'bg-blue-50 font-medium text-blue-800' : 'text-slate-600 hover:bg-slate-100')
-                  }
-                >
+                <NavLink key={to} to={to} end className={({ isActive }) => cx('btn98 px-3 py-1', isActive && 'bg-white! font-bold')}>
                   {label}
                 </NavLink>
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3 text-sm text-slate-600">
-            <a href="/" target="_blank" rel="noreferrer" className="hover:underline">
+          <div className="flex items-center gap-3 text-sm">
+            <a href="/" target="_blank" rel="noreferrer" className="text-[#0000ee] underline">
               Public site ↗
             </a>
             <span className="hidden sm:inline">{email}</span>
