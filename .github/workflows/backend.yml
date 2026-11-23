@@ -68,8 +68,8 @@ jobs:
           BASE="${SITE_URL:-$SITE}"
           ORIGINS="$SITE${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}"
           supabase secrets set --project-ref "$PROJECT_REF" \
-            SESSION_SECRET="$SESSION_SECRET" APP_BASE_URL="$BASE" ALLOWED_ORIGINS="$ORIGINS" EMAIL_PROVIDER=console
-          supabase functions deploy api --project-ref "$PROJECT_REF" --no-verify-jwt
+            SESSION_SECRET="$SESSION_SECRET" APP_BASE_URL="$BASE" ALLOWED_ORIGINS="$ORIGINS" EMAIL_PROVIDER=console --yes
+          supabase functions deploy api --project-ref "$PROJECT_REF" --no-verify-jwt --yes
       - name: Smoke test
         if: steps.cfg.outputs.ready == 'true'
         run: curl --fail --silent --show-error "https://$PROJECT_REF.supabase.co/functions/v1/api/health"
