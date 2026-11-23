@@ -19,6 +19,7 @@ import {
   ScheduleStatusBadge,
   Select,
   Stat,
+  Textarea,
 } from '../../components/ui';
 import { TimelineBar, TimelineLegend, TimelineList, type TimelineEntry } from '../../components/Timeline';
 import { emptyGroup, GroupForm } from '../../components/GroupForm';
@@ -35,6 +36,7 @@ export function SessionPage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [editing, setEditing] = useState<AdminBooking | 'new' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [announceOpen, setAnnounceOpen] = useState(false);
   const [link, setLink] = useState<{ group: string; url: string } | null>(null);
   useTitle(data ? `Session ${data.session.date}` : 'Session');
 
@@ -190,6 +192,9 @@ export function SessionPage() {
           </Button>
           <Button variant="secondary" onClick={() => setSettingsOpen(true)}>
             Edit date & hours
+          </Button>
+          <Button variant="secondary" onClick={() => setAnnounceOpen(true)} disabled={data.bookings.length === 0}>
+            Email all groups
           </Button>
           <Button
             variant="ghost"
@@ -493,6 +498,17 @@ export function SessionPage() {
               onDone: done('Booking updated.'),
             });
           }
+        }}
+      />
+      <AnnounceModal
+        open={announceOpen}
+        sessionId={id}
+        groups={data.bookings.length}
+        date={s.date}
+        onClose={() => setAnnounceOpen(false)}
+        onSent={(text) => {
+          setAnnounceOpen(false);
+          setFlash({ tone: 'green', text });
         }}
       />
       <SessionSettingsModal open={settingsOpen} detail={data} onClose={() => setSettingsOpen(false)} run={run} done={done} />
@@ -855,5 +871,83 @@ function IntervalsEditor({ intervals, onSave }: { intervals: IntervalDTO[]; onSa
         )}
       </div>
     </Card>
+  );
+}
+
+function AnnounceModal({
+  open,
+  sessionId,
+  groups,
+  date,
+  onClose,
+  onSent,
+}: {
+  open: boolean;
+  sessionId: string;
+  groups: number;
+  date: string;
+  onClose: () => void;
+  onSent: (text: string) => void;
+}) {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) {
+      setSubject(`Update about the exam on ${formatDateLong(date)}`);
+      setMessage('');
+      setError(null);
+    }
+  }, [open, date]);
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api.admin.post<{ recipients: number; sent: number; notConfigured: number; failed: number }>(
+        `/admin/sessions/${sessionId}/announce`,
+        { subject, message },
+      );
+      onSent(
+        r.notConfigured
+          ? `Message recorded for ${r.recipients} groups, but no email provider is configured, so nothing was sent (see Notifications).`
+          : `Message sent to ${r.sent} of ${r.recipients} groups${r.failed ? ` (${r.failed} failed, see Notifications)` : ''}.`,
+      );
+    } catch (e) {
+      setError((e as ApiFailure).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      open={open}
+      title="Email all groups"
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={send} loading={busy} disabled={!subject.trim() || !message.trim()}>
+            Send to {groups} {groups === 1 ? 'group' : 'groups'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          Each group representative receives this message with their booking details (time, location). Replies go to the course contact
+          email.
+        </p>
+        {error && <Alert tone="red">{error}</Alert>}
+        <Field label="Subject" htmlFor="an-subject">
+          <Input id="an-subject" value={subject} maxLength={150} onChange={(e) => setSubject(e.target.value)} />
+        </Field>
+        <Field label="Message" htmlFor="an-message">
+          <Textarea id="an-message" rows={8} value={message} maxLength={5000} onChange={(e) => setMessage(e.target.value)} />
+        </Field>
+      </div>
+    </Modal>
   );
 }

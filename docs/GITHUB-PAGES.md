@@ -83,6 +83,27 @@ Content and code carry over. Either keep this organization and update `content/`
 or create a new organization (e.g. `DDAM-27-28`), copy the repository, and reuse the same Supabase project. To start fresh,
 create a new course (see `docs/DEPLOYMENT.md`, "Reusing for another course or year").
 
+## Emails to students (optional, free)
+
+Without an email provider, emails are only listed under **Dashboard → Notifications** and nothing is sent. To send them
+for real with [Brevo](https://www.brevo.com) (free, 300 emails/day, no domain needed):
+
+1. Sign up at Brevo. Under **Senders, Domains & Dedicated IPs → Senders**, add and verify the address the emails will
+   come from.
+2. Under **SMTP & API → API Keys**, create an API key.
+3. In GitHub → **Settings → Secrets and variables → Actions**, add:
+   - Secret `BREVO_API_KEY`: the API key.
+   - Variable `EMAIL_FROM`: e.g. `DDAM Exams <your-verified-address@example.org>`.
+   - Optional variable `ADMIN_NOTIFICATION_EMAIL`: where you want a short notice of each new, changed or cancelled booking.
+4. **Actions → Booking server → Run workflow** (no need to tick _seed_). The log line "Email provider: brevo" confirms it.
+
+Replies to student emails go to the **Contact email** set in the dashboard (**Course & rules**).
+
+What students receive: confirmation when they book; a notice when they modify or cancel; an email whenever you change
+their examination time, or the date, location or title of their day; when you finalize or unlock the schedule; and any
+message you send with **Email all groups** on a session page. Students can cancel online until 24 hours before their
+examination; after that, the booking page asks them to email you.
+
 ## Limits worth knowing
 
 - The repository must be **public** for free GitHub Pages in an organization. It contains no secrets and no student data.

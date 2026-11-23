@@ -20,7 +20,8 @@ import {
 } from '../repo';
 import { computeSessionSchedule, runMutation, type ChangeSummary } from './schedule';
 import { buildTimeline, maxBookableGroupSize, simulateAdd } from '../../shared/scheduler';
-import { examDuration } from '../../shared/rules';
+import { CANCEL_CUTOFF_HOURS, examDuration } from '../../shared/rules';
+import { localToUtc, parseTime } from '../../shared/time';
 import { validateGroup, type GroupInput } from '../../shared/validation';
 import {
   BLOCK_TYPE_LABELS,
@@ -162,8 +163,29 @@ function capacityError(session: SessionRow) {
   );
 }
 
+/**
+ * Last moment a student can cancel online: CANCEL_CUTOFF_HOURS before their examination time,
+ * or before the start of the day when no time is assigned yet.
+ */
+export function cancelDeadline(session: SessionRow, b: BookingRow): Date {
+  const examStart = b.assigned_start ?? localToUtc(session.exam_date, parseTime(session.start_time.slice(0, 5)), session.timezone);
+  return new Date(new Date(examStart).getTime() - CANCEL_CUTOFF_HOURS * 3_600_000);
+}
+
+function cancelClosed(course: CourseRow, action: string) {
+  const contact = course.contact_email ? ` at ${course.contact_email}` : '';
+  return new ApiError(
+    409,
+    'CANCEL_CLOSED',
+    `${action} is not possible online in the ${CANCEL_CUTOFF_HOURS} hours before your examination. Please email the lecturer privately${contact}.`,
+  );
+}
+
 export function managedBooking(session: SessionRow, b: BookingRow): ManagedBooking {
+  const deadline = cancelDeadline(session, b);
   return {
+    cancelDeadline: deadline.toISOString(),
+    canCancel: b.status === 'active' && Date.now() < deadline.getTime(),
     id: b.id,
     sequence: b.booking_sequence,
     sessionId: b.session_id,
@@ -358,6 +380,8 @@ export async function updateManagedBooking(sql: Sql, env: Env, req: UpdateBookin
             'NOT_BOOKABLE',
             'Registration for your date is closed, so the group size can no longer be changed. Please contact the lecturer.',
           );
+        // Moving away from a date is a cancellation of that date: same deadline.
+        if (moving && Date.now() >= cancelDeadline(from, b).getTime()) throw cancelClosed(course, 'Changing the examination date');
         if (moving) {
           const blocker = bookingBlocker(to);
           if (blocker) throw new ApiError(409, 'NOT_BOOKABLE', blocker);
@@ -415,7 +439,10 @@ export async function cancelManagedBooking(sql: Sql, env: Env, token: unknown, c
   const m = await runMutation(
     sql,
     { actor: 'student', reason: 'Booking cancelled by student', sessionIds: [current.session_id] },
-    async (tx) => {
+    async (tx, course, [session]) => {
+      const b = await loadBooking(tx, id, true);
+      if (b.status !== 'active') throw new ApiError(409, 'CANCELLED', 'This booking has already been cancelled.');
+      if (Date.now() >= cancelDeadline(session, b).getTime()) throw cancelClosed(course, 'Cancelling');
       await cancelBookingRow(tx, id);
       return { value: null };
     },

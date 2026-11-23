@@ -26,10 +26,18 @@ import { cancelBookingRow, insertBooking, insertMembers, manageUrl, sessionAvail
 import { buildTimeline, computeStats, validateAvailability } from '../../shared/scheduler';
 import { validateRules } from '../../shared/rules';
 import { normalizeText, validateGroup, type GroupInput } from '../../shared/validation';
-import { formatTime, parseTime } from '../../shared/time';
+import { formatDateLong, formatTime, parseTime } from '../../shared/time';
 import { BLOCK_TYPES, BLOCK_TYPE_LABELS, type BlockType, type DurationRules, type PublicScheduleMode } from '../../shared/types';
 import { isoWithOffset, toCsv, toIcs } from '../../shared/export';
-import { confirmationEmail, deliver, notifyTimeChanges, simpleEmail } from './notify';
+import {
+  announcementEmail,
+  confirmationEmail,
+  deliver,
+  notifyTimeChanges,
+  sessionUpdateEmail,
+  simpleEmail,
+  type EmailMessage,
+} from './notify';
 
 const audit = (db: Db, actor: string, action: string, entity: string, id: string | null, details: object = {}) =>
   db`insert into audit_log (actor, action, entity, entity_id, details) values (${actor}, ${action}, ${entity}, ${id}, ${db.json(details as never)})`;
@@ -319,6 +327,7 @@ function done<T>(m: { summary: ChangeSummary; value: T }, flags: MutationFlags) 
   return { preview: !!flags.preview, summary: m.summary, value: m.value };
 }
 
+/** Lecturer changes: every group whose examination time changed (by any amount) gets an email. */
 async function afterAdminChange(sql: Sql, env: Env, course: CourseRow, summary: ChangeSummary, skip: string[] = []) {
   await notifyTimeChanges(
     sql,
@@ -326,7 +335,55 @@ async function afterAdminChange(sql: Sql, env: Env, course: CourseRow, summary: 
     course,
     summary.changes.filter((c) => c.after?.status === 'active').map((c) => c.bookingId),
     skip,
+    'time_change',
+    true,
   );
+}
+
+/** Human-readable list of the session details students care about that differ between two versions. */
+function sessionDetailChanges(before: SessionRow, after: SessionRow): string[] {
+  const out: string[] = [];
+  const show = (v: string | null) => v || 'not set';
+  if (before.exam_date !== after.exam_date) out.push(`Date: ${formatDateLong(before.exam_date)} → ${formatDateLong(after.exam_date)}`);
+  if ((before.location ?? '') !== (after.location ?? '')) out.push(`Location: ${show(before.location)} → ${show(after.location)}`);
+  if ((before.title ?? '') !== (after.title ?? '')) out.push(`Title: ${show(before.title)} → ${show(after.title)}`);
+  return out;
+}
+
+/** Emails every active group of a session; returns the delivery counts. */
+async function emailSessionGroups(
+  sql: Sql,
+  env: Env,
+  sessionId: string,
+  kind: string,
+  build: (course: CourseRow, session: SessionRow, b: BookingRow) => EmailMessage,
+) {
+  const course = await loadActiveCourse(sql);
+  const session = await loadSession(sql, sessionId);
+  const counts = { sent: 0, notConfigured: 0, failed: 0, ids: [] as string[] };
+  for (const b of await loadBookings(sql, [sessionId])) {
+    const status = await deliver(sql, env, kind, build(course, session, b), b.id);
+    if (status === 'sent') counts.sent++;
+    else if (status === 'not_configured') counts.notConfigured++;
+    else counts.failed++;
+    counts.ids.push(b.id);
+    await sql`update bookings set notified_start = assigned_start, notified_session_id = session_id where id = ${b.id}`;
+  }
+  return counts;
+}
+
+/** A free-text message from the lecturer to every group booked on a session. */
+export async function announce(sql: Sql, env: Env, actor: string, sessionId: string, raw: { subject?: unknown; message?: unknown }) {
+  const subject = typeof raw.subject === 'string' ? raw.subject.trim() : '';
+  const message = typeof raw.message === 'string' ? raw.message.trim() : '';
+  if (!subject || subject.length > 150) throw new ApiError(422, 'VALIDATION', 'Please enter a subject (up to 150 characters).');
+  if (!message || message.length > 5000) throw new ApiError(422, 'VALIDATION', 'Please enter a message (up to 5000 characters).');
+  await loadSession(sql, sessionId);
+  const { ids, ...counts } = await emailSessionGroups(sql, env, sessionId, 'announcement', (c, s, b) =>
+    announcementEmail(c, s, b, subject, message),
+  );
+  await audit(sql, actor, 'announce', 'session', sessionId, { subject, recipients: ids.length });
+  return { recipients: ids.length, ...counts };
 }
 
 // ---------------------------------------------------------------- sessions
@@ -357,10 +414,12 @@ export async function createSession(sql: Sql, actor: string, raw: Partial<Sessio
 
 export async function updateSession(sql: Sql, env: Env, actor: string, id: string, raw: Partial<SessionInput>, flags: MutationFlags) {
   const input = parseSessionInput(raw);
+  let before: SessionRow | undefined;
   const m = await runMutation(
     sql,
     { actor: `admin:${actor}`, reason: 'Session settings changed', sessionIds: [id], ...flags },
-    async (tx, course) => {
+    async (tx, course, [s]) => {
+      before = s;
       const current = await loadIntervals(tx, [id]);
       checkAvailability(
         input.startTime,
@@ -378,7 +437,13 @@ export async function updateSession(sql: Sql, env: Env, actor: string, id: strin
       return { value: null };
     },
   );
-  if (!flags.preview) await afterAdminChange(sql, env, m.course, m.summary);
+  if (flags.preview) return done(m, flags);
+  // Date, location or title changed: tell every group (the email also shows their current time).
+  const changes = before ? sessionDetailChanges(before, await loadSession(sql, id)) : [];
+  const told = changes.length
+    ? (await emailSessionGroups(sql, env, id, 'session_update', (c, s, b) => sessionUpdateEmail(c, s, b, changes))).ids
+    : [];
+  await afterAdminChange(sql, env, m.course, m.summary, told);
   return done(m, flags);
 }
 
@@ -683,7 +748,9 @@ export async function unfinalize(sql: Sql, env: Env, actor: string, sessionId: s
       return { value: null };
     },
   );
-  if (!flags.preview) await afterAdminChange(sql, env, m.course, m.summary);
+  if (flags.preview) return done(m, flags);
+  const { ids } = await emailSessionGroups(sql, env, sessionId, 'unfinalized', (c, s, b) => simpleEmail(c, s, b, 'unfinalized'));
+  await afterAdminChange(sql, env, m.course, m.summary, ids);
   return done(m, flags);
 }
 

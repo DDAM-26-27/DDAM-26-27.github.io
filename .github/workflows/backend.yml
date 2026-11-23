@@ -63,12 +63,25 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           SITE_URL: ${{ vars.SITE_URL }}
           EXTRA_ORIGINS: ${{ vars.EXTRA_ORIGINS }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          ADMIN_NOTIFICATION_EMAIL: ${{ vars.ADMIN_NOTIFICATION_EMAIL }}
         run: |
           SITE="https://${OWNER,,}.github.io"
           BASE="${SITE_URL:-$SITE}"
           ORIGINS="$SITE${EXTRA_ORIGINS:+,$EXTRA_ORIGINS}"
+          # Email: Brevo if its key is set, else Resend, else "console" (emails are only listed in the dashboard).
+          EMAIL=(EMAIL_PROVIDER=console)
+          if [ -n "$BREVO_API_KEY" ] && [ -n "$EMAIL_FROM" ]; then
+            EMAIL=(EMAIL_PROVIDER=brevo BREVO_API_KEY="$BREVO_API_KEY" EMAIL_FROM="$EMAIL_FROM")
+          elif [ -n "$RESEND_API_KEY" ] && [ -n "$EMAIL_FROM" ]; then
+            EMAIL=(EMAIL_PROVIDER=resend RESEND_API_KEY="$RESEND_API_KEY" EMAIL_FROM="$EMAIL_FROM")
+          fi
+          if [ -n "$ADMIN_NOTIFICATION_EMAIL" ]; then EMAIL+=(ADMIN_NOTIFICATION_EMAIL="$ADMIN_NOTIFICATION_EMAIL"); fi
+          echo "Email provider: ${EMAIL[0]#EMAIL_PROVIDER=}"
           supabase secrets set --project-ref "$PROJECT_REF" \
-            SESSION_SECRET="$SESSION_SECRET" APP_BASE_URL="$BASE" ALLOWED_ORIGINS="$ORIGINS" EMAIL_PROVIDER=console --yes
+            SESSION_SECRET="$SESSION_SECRET" APP_BASE_URL="$BASE" ALLOWED_ORIGINS="$ORIGINS" "${EMAIL[@]}" --yes
           supabase functions deploy api --project-ref "$PROJECT_REF" --no-verify-jwt --yes
       - name: Smoke test
         if: steps.cfg.outputs.ready == 'true'

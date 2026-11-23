@@ -61,10 +61,7 @@ if (typeof Deno !== 'undefined') {
       console.error('edge handler crashed', err);
       const isHealth = new URL(req.url).pathname.endsWith('/health');
       const detail = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
-      return Response.json(
-        { error: { code: 'CRASH', message: 'Server error.', ...(isHealth ? { detail } : {}) } },
-        { status: 500 },
-      );
+      return Response.json({ error: { code: 'CRASH', message: 'Server error.', ...(isHealth ? { detail } : {}) } }, { status: 500 });
     }
   });
 }

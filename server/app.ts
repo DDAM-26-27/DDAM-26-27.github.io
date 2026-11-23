@@ -185,6 +185,10 @@ export function createApp(getDeps: (c: Context) => AppDeps | Promise<AppDeps>) {
     const body = await json(c);
     return c.json(await admin.unfinalize(c.var.deps.sql, c.var.deps.env, c.var.admin.email, c.req.param('id'), flags(c, body)));
   });
+  adminApi.post('/sessions/:id/announce', async (c) => {
+    const body = await json<{ subject?: unknown; message?: unknown }>(c);
+    return c.json(await admin.announce(c.var.deps.sql, c.var.deps.env, c.var.admin.email, c.req.param('id'), body));
+  });
   adminApi.post('/sessions/:id/bookings', async (c) => {
     const body = await json(c);
     return c.json(

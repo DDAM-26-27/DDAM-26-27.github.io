@@ -1,5 +1,11 @@
 import type { DurationRules } from './types';
 
+/**
+ * Students can cancel their booking (or move it to another date) online until this many hours
+ * before their examination. After that they must email the lecturer.
+ */
+export const CANCEL_CUTOFF_HOURS = 24;
+
 /** exam_duration = presentation + questions_per_student × group_size */
 export function examDuration(rules: DurationRules, groupSize: number): number {
   return rules.presentationMinutes + rules.questionsPerStudentMinutes * groupSize;

@@ -138,6 +138,10 @@ export interface ManagedBooking {
   scheduleStatus: ScheduleStatus;
   /** True when the current time differs from a previously confirmed (finalized) time. */
   revised: boolean;
+  /** ISO instant after which the booking can no longer be cancelled online. */
+  cancelDeadline: string;
+  /** Whether the student can still cancel (or move to another date) online. */
+  canCancel: boolean;
   createdAt: string;
   updatedAt: string;
 }

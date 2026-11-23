@@ -9,6 +9,20 @@ import { formatDateLong, formatRange } from '../../shared/time';
 import { GroupForm } from '../components/GroupForm';
 import { Alert, Badge, Button, Card, Field, Input, Loading, Modal, PageTitle, ScheduleStatusBadge, Select } from '../components/ui';
 import { downloadBookingIcs } from './Book';
+import { CANCEL_CUTOFF_HOURS } from '../../shared/rules';
+
+/** e.g. "Mon 14 Dec 2026, 10:30" in the session's time zone. */
+function formatInstant(iso: string, timeZone: string): string {
+  return new Date(iso).toLocaleString('en-GB', {
+    timeZone,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 function readToken(): string {
   const fromHash = new URLSearchParams(window.location.hash.slice(1)).get('t');
@@ -257,16 +271,45 @@ export function ManagePage() {
               <Link to={`/schedule/${booking.sessionId}`} className="self-center text-sm font-medium text-blue-700 hover:underline">
                 View the day&apos;s schedule
               </Link>
-              <Button
-                variant="ghost"
-                className="ml-auto text-red-700"
-                onClick={() => {
-                  setConfirmText('');
-                  setCancelOpen(true);
-                }}
-              >
-                Cancel booking
-              </Button>
+              {booking.canCancel && (
+                <Button
+                  variant="ghost"
+                  className="ml-auto text-red-700"
+                  onClick={() => {
+                    setConfirmText('');
+                    setCancelOpen(true);
+                  }}
+                >
+                  Cancel booking
+                </Button>
+              )}
+            </div>
+          )}
+          {active && (
+            <div className="mt-4">
+              {booking.canCancel ? (
+                <p className="text-sm text-slate-600">
+                  You can cancel online until <strong>{formatInstant(booking.cancelDeadline, booking.timezone)}</strong> (
+                  {CANCEL_CUTOFF_HOURS} hours before your examination).
+                </p>
+              ) : (
+                <Alert tone="amber" title="Online cancellation is closed">
+                  Your examination is less than {CANCEL_CUTOFF_HOURS} hours away. To cancel, email the lecturer privately
+                  {course.contactEmail ? (
+                    <>
+                      {' '}
+                      at{' '}
+                      <a
+                        className="underline"
+                        href={`mailto:${course.contactEmail}?subject=${encodeURIComponent(`Cancel booking: ${booking.groupName}`)}`}
+                      >
+                        {course.contactEmail}
+                      </a>
+                    </>
+                  ) : null}
+                  .
+                </Alert>
+              )}
             </div>
           )}
           {!active && (
@@ -290,13 +333,15 @@ export function ManagePage() {
               hint={
                 finalized
                   ? 'The schedule is finalized; the date cannot be changed.'
-                  : 'Only dates that can accommodate your group are listed. Moving puts your group at the end of the queue for the new date.'
+                  : !booking.canCancel
+                    ? `Your examination is less than ${CANCEL_CUTOFF_HOURS} hours away, so the date can no longer be changed online. Email the lecturer.`
+                    : 'Only dates that can accommodate your group are listed. Moving puts your group at the end of the queue for the new date.'
               }
             >
               <Select
                 id="move"
                 value={form.sessionId}
-                disabled={finalized}
+                disabled={finalized || !booking.canCancel}
                 onChange={(e) => {
                   setForm({ ...form, sessionId: e.target.value });
                   setPreview(null);

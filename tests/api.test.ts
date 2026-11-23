@@ -263,6 +263,47 @@ describe.runIf(() => available)('API', () => {
     expect((await call('POST', '/manage/update', { token, sessionId: other, ...group('Managed', 4) })).status).toBe(409);
   });
 
+  it('students cannot cancel or change date online within 24 hours of their examination', async () => {
+    const id = await newSession('2099-03-05', { end: '18:00' });
+    const other = await newSession('2099-03-06', { end: '18:00' });
+    const r = await book(id, 'Cutoff Group', 2);
+    expect(r.status, JSON.stringify(r.data)).toBe(201);
+    const token = r.data.managementToken;
+    expect(r.data.booking.canCancel).toBe(true);
+    expect(new Date(r.data.booking.cancelDeadline).getTime()).toBe(new Date('2099-03-04T08:00:00Z').getTime()); // 09:00 CET − 24 h
+
+    // Pretend the examination is in 2 hours.
+    await sql`update bookings set assigned_start = now() + interval '2 hours' where id = ${r.data.booking.id}`;
+    expect((await call('POST', '/manage/booking', { token })).data.booking.canCancel).toBe(false);
+    const cancel = await call('POST', '/manage/cancel', { token, confirmation: 'Cutoff Group' });
+    expect(cancel.status).toBe(409);
+    expect(cancel.data.error.code).toBe('CANCEL_CLOSED');
+    expect(cancel.data.error.message).toContain('email the lecturer');
+    const move = await call('POST', '/manage/update', { token, sessionId: other, ...group('Cutoff Group', 2) });
+    expect(move.data.error.code).toBe('CANCEL_CLOSED');
+    // Editing names or notes is still allowed.
+    const edit = await call('POST', '/manage/update', { token, sessionId: id, ...group('Cutoff Group', 2, { notes: 'hello' }) });
+    expect(edit.status).toBe(200);
+  });
+
+  it('lecturer changes to date/location/title and announcements email every group', async () => {
+    const id = await newSession('2099-03-07', { end: '18:00' });
+    await book(id, 'Mail A', 2);
+    await book(id, 'Mail B', 3);
+    const upd = await adm('PUT', `/sessions/${id}`, { date: '2099-03-07', startTime: '09:00', endTime: '18:00', location: 'Room B' });
+    expect(upd.status).toBe(200);
+    const updates = await sql<{ to_email: string; body: string }[]>`
+      select to_email, body from notifications where kind = 'session_update' and to_email in ('maila@example.org', 'mailb@example.org')`;
+    expect(updates).toHaveLength(2);
+    expect(updates[0].body).toContain('Location: not set → Room B');
+
+    const ann = await adm('POST', `/sessions/${id}/announce`, { subject: 'Bring a laptop', message: 'Please bring a laptop.' });
+    expect(ann.data).toMatchObject({ recipients: 2, notConfigured: 2 });
+    const sent = await sql`select 1 from notifications where kind = 'announcement' and subject like '%Bring a laptop'`;
+    expect(sent).toHaveLength(2);
+    expect((await adm('POST', `/sessions/${id}/announce`, { subject: '', message: 'x' })).status).toBe(422);
+  });
+
   it('cancellation triggers recalculation of later groups', async () => {
     const id = await newSession('2099-03-03', { end: '18:00' });
     const a = await book(id, 'C1', 4);
