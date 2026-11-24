@@ -9,6 +9,7 @@ import { formatDateLong, formatRange } from '../../shared/time';
 import { GroupForm } from '../components/GroupForm';
 import { Alert, Badge, Button, Card, Field, Input, Loading, Modal, PageTitle, ScheduleStatusBadge, Select } from '../components/ui';
 import { downloadBookingIcs } from './Book';
+import { SubmissionNotice } from '../components/SubmissionNotice';
 import { CANCEL_CUTOFF_HOURS } from '../../shared/rules';
 
 /** e.g. "Mon 14 Dec 2026, 10:30" in the session's time zone. */
@@ -244,6 +245,11 @@ export function ManagePage() {
               </div>
             )}
           </dl>
+          {active && (
+            <div className="mt-4">
+              <SubmissionNotice examDate={booking.date} contactEmail={course.contactEmail} timezone={booking.timezone} />
+            </div>
+          )}
           {active && !finalized && (
             <div className="mt-4">
               <Alert tone="amber">

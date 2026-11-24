@@ -9,6 +9,7 @@ import { formatDateLong, formatRange } from '../../shared/time';
 import { toIcs } from '../../shared/export';
 import { emptyGroup, GroupForm } from '../components/GroupForm';
 import { Alert, Button, Card, Loading, PageTitle } from '../components/ui';
+import { deadlineLabel, SubmissionNotice } from '../components/SubmissionNotice';
 
 type Step = 'details' | 'preview' | 'done';
 
@@ -55,6 +56,7 @@ export function BookPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CreateResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [understood, setUnderstood] = useState(false);
 
   if (!course || sessions.loading) return <Loading />;
   if (!session)
@@ -208,8 +210,23 @@ export function BookPage() {
               time. This is an estimate and may change until the lecturer finalizes the schedule.
             </Alert>
           </div>
+          <div className="mt-4">
+            <SubmissionNotice examDate={preview.date} contactEmail={course.contactEmail} timezone={course.timezone} />
+          </div>
+          <label className="win-sunken mt-4 flex cursor-pointer items-start gap-3 bg-white p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-blue-700"
+              checked={understood}
+              onChange={(e) => setUnderstood(e.target.checked)}
+            />
+            <span>
+              <strong>I have read the box above.</strong> Our group will email the repository link and the PDF report by{' '}
+              <strong>{deadlineLabel(preview.date)}</strong>, confirming that we will come; otherwise the booking will be cancelled.
+            </span>
+          </label>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button onClick={confirm} loading={busy}>
+            <Button onClick={confirm} loading={busy} disabled={!understood}>
               Confirm booking
             </Button>
             <Button variant="secondary" onClick={() => setStep('details')} disabled={busy}>
@@ -227,6 +244,9 @@ export function BookPage() {
               <> · estimated time {formatRange(result.booking.start, result.booking.end)}</>
             )}
           </Alert>
+          <div className="mt-4">
+            <SubmissionNotice examDate={result.booking.date} contactEmail={course.contactEmail} timezone={course.timezone} />
+          </div>
           <div className="mt-5 space-y-2">
             <h2 className="font-semibold">Your private booking link</h2>
             <p className="text-sm text-slate-600">

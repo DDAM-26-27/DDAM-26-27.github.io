@@ -7,6 +7,7 @@ import type { Db } from '../db';
 import type { Env } from '../env';
 import type { EmailStatus } from '../../shared/types';
 import { formatDateLong, formatRange } from '../../shared/time';
+import { GRADING_WORKING_DAYS, submissionDeadline } from '../../shared/rules';
 import { localMinutes, type BookingRow, type CourseRow, type SessionRow } from '../repo';
 
 export interface EmailMessage {
@@ -130,6 +131,21 @@ function timeLine(session: SessionRow, b: BookingRow): string {
 const footer = (course: CourseRow) =>
   `\n\n—\n${course.name} (${course.academic_year}) exam booking.\nThis is an organizational tool and not an official university registration system.`;
 
+const materialDeadline = (session: SessionRow) => `${formatDateLong(submissionDeadline(session.exam_date))}, 23:59`;
+
+/** What to send before the exam, and by when (also shown on the website). */
+function submissionInstructions(course: CourseRow, session: SessionRow): string {
+  const to = course.contact_email ?? 'the lecturer';
+  return [
+    `IMPORTANT — by ${materialDeadline(session)} (${GRADING_WORKING_DAYS} working days before your exam), send ONE email per group to ${to} with:`,
+    '  1. the link to your code repository (give the lecturer at least read access);',
+    '  2. your report as a PDF;',
+    '  3. a sentence confirming that your group will come to the exam.',
+    'You may add other material, but only the repository and the report will be evaluated.',
+    'If nothing arrives by the deadline, the lecturer will cancel your booking. Material sent later counts as late.',
+  ].join('\n');
+}
+
 export function bookingSummary(session: SessionRow, b: BookingRow): string {
   return [
     `Group: ${b.group_name}`,
@@ -137,6 +153,7 @@ export function bookingSummary(session: SessionRow, b: BookingRow): string {
     `Examination: ${timeLine(session, b)}`,
     `Duration: ${b.duration_minutes} minutes`,
     session.location ? `Location: ${session.location}` : null,
+    `Code + report due by: ${materialDeadline(session)}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -149,6 +166,7 @@ export function confirmationEmail(course: CourseRow, session: SessionRow, b: Boo
     subject: `[${course.name}] Booking confirmed — ${b.group_name}`,
     text:
       `Your group has been registered for the ${course.name} oral examination.\n\n${bookingSummary(session, b)}\n\n` +
+      `${submissionInstructions(course, session)}\n\n` +
       `Manage or cancel your booking (keep this link private):\n${manageUrl}` +
       footer(course),
   };

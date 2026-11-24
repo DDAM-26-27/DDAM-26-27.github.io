@@ -4,7 +4,8 @@ import { useCourse } from '../lib/course';
 import { useLoad, useTitle } from '../lib/hooks';
 import type { PublicSession } from '../../shared/types';
 import { formatDateLong, formatDuration, formatTime } from '../../shared/time';
-import { CANCEL_CUTOFF_HOURS, examDuration } from '../../shared/rules';
+import { CANCEL_CUTOFF_HOURS, GRADING_WORKING_DAYS, examDuration } from '../../shared/rules';
+import { deadlineLabel } from '../components/SubmissionNotice';
 import { Alert, Card, Loading, PageTitle, RegistrationBadge, ScheduleStatusBadge } from '../components/ui';
 
 export function SessionCard({ s }: { s: PublicSession }) {
@@ -13,7 +14,7 @@ export function SessionCard({ s }: { s: PublicSession }) {
     <Card className="flex flex-col" title={`📅 ${s.title || 'Examination day'}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xl font-bold text-blue-700">{formatDateLong(s.date)}</p>
+          <h3 className="text-xl font-bold text-blue-700">{formatDateLong(s.date)}</h3>
           <p className="text-sm">
             🕘 {s.startTime}–{s.endTime}
             {s.location ? (
@@ -29,6 +30,9 @@ export function SessionCard({ s }: { s: PublicSession }) {
           <ScheduleStatusBadge status={s.scheduleStatus} />
         </div>
       </div>
+      <p className="win-sunken mt-3 bg-tooltip px-2 py-1 text-sm">
+        📝 Code + report due by <strong>{deadlineLabel(s.date)}</strong> (by email, see above)
+      </p>
       <dl className="win-sunken mt-4 grid grid-cols-2 gap-x-4 gap-y-2 bg-slate-50 p-3 text-sm sm:grid-cols-4">
         <div>
           <dt className="text-slate-500">Groups registered</dt>
@@ -72,7 +76,7 @@ export function BookingHomePage() {
       <PageTitle sub={course?.description}>{course ? `${course.name} — oral examination` : 'Oral examination'}</PageTitle>
       {course && (
         <Card className="mb-5" title="How it works — read this first">
-          <ol className="grid gap-3 sm:grid-cols-3">
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               ['Choose a date', 'Pick one of the examination days below and click the blue button.'],
               [
@@ -82,6 +86,10 @@ export function BookingHomePage() {
               [
                 'Get your time',
                 `The time is assigned automatically: ${course.rules.presentationMinutes} min + ${course.rules.questionsPerStudentMinutes} min per student (e.g. ${examDuration(course.rules, 4)} min for 4 students). You cannot choose it.`,
+              ],
+              [
+                'Send your material',
+                `By 23:59 of the deadline shown for your date (${GRADING_WORKING_DAYS} working days before the exam), email the lecturer your repository link and PDF report, confirming you will come. No email = booking cancelled.`,
               ],
             ].map(([title, text], i) => (
               <li key={title} className="flex gap-3">

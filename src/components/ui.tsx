@@ -257,7 +257,7 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
 
 export function ScheduleStatusBadge({ status }: { status: 'tentative' | 'finalized' }) {
   return status === 'finalized' ? (
-    <Badge tone="green">Final · times confirmed</Badge>
+    <Badge tone="green">Finalized · times confirmed</Badge>
   ) : (
     <Badge tone="amber">Provisional · times may change</Badge>
   );

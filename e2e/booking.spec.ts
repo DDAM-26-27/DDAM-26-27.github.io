@@ -13,7 +13,10 @@ test.describe.serial('student and lecturer workflows', () => {
   test('student registers a group and gets an automatically assigned time', async ({ page }) => {
     await page.goto('/booking');
     await expect(page.getByRole('heading', { name: 'Tuesday, 15 December 2026' })).toBeVisible();
-    await page.getByRole('link', { name: 'Register a group' }).first().click();
+    await page
+      .getByRole('link', { name: /Register my group for this date/ })
+      .first()
+      .click();
 
     // Validation: empty form
     await page.getByRole('button', { name: 'Continue to review' }).click();
@@ -28,6 +31,8 @@ test.describe.serial('student and lecturer workflows', () => {
     await page.getByRole('button', { name: 'Continue to review' }).click();
     await expect(page.getByText('09:00–10:10')).toBeVisible();
     await expect(page.getByText('you cannot choose a time')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
+    await page.getByRole('checkbox', { name: /I have read the box above/ }).check();
     await page.getByRole('button', { name: 'Confirm booking' }).click();
 
     await expect(page.getByText('Your group is registered')).toBeVisible();
@@ -38,7 +43,7 @@ test.describe.serial('student and lecturer workflows', () => {
 
   test('public schedule shows the group but no private data', async ({ page }) => {
     await page.goto('/booking');
-    await page.getByRole('link', { name: 'View schedule →' }).first().click();
+    await page.getByRole('link', { name: 'See the timetable of this day' }).first().click();
     await expect(page.getByText('Graph Miners').first()).toBeVisible();
     await expect(page.getByText('Lunch break').first()).toBeVisible();
     await expect(page.getByText('This schedule is tentative')).toBeVisible();
@@ -101,6 +106,6 @@ test.describe.serial('student and lecturer workflows', () => {
   test('@mobile booking page is usable on a phone', async ({ page }) => {
     await page.goto('/booking');
     await expect(page.getByRole('heading', { name: 'Friday, 18 December 2026' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Register a group' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Register my group for this date/ }).first()).toBeVisible();
   });
 });
